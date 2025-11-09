@@ -1,0 +1,47 @@
+gesture.midi.xxx.fr {
+    # Enable automatic HTTPS with Let's Encrypt
+    # Caddy will automatically obtain and renew SSL certificates
+
+    # Root directory for static files
+    root * /srv/http/gesture
+
+    # Enable file server
+    file_server
+
+    # Enable gzip compression
+    encode gzip
+
+    # Security headers
+    header {
+        # Prevent clickjacking
+        X-Frame-Options "SAMEORIGIN"
+        # Prevent MIME sniffing
+        X-Content-Type-Options "nosniff"
+        # Enable XSS protection
+        X-XSS-Protection "1; mode=block"
+        # Referrer policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Permissions policy for camera access (required for webcam)
+        Permissions-Policy "camera=(self)"
+    }
+
+    # Enable access logging
+    log {
+        output file /var/log/caddy/gesture-midi-access.log
+        format console
+    }
+
+    # Handle SPA routing - serve index.html for any non-file requests
+    try_files {path} /index.html
+
+    # Cache static assets
+    @static {
+        path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2
+    }
+    header @static Cache-Control "public, max-age=31536000, immutable"
+}
+
+# Optional: Redirect www to non-www (if using www subdomain)
+www.gesture.midi.xxx.fr {
+    redir https://gesture.midi.xxx.fr{uri} permanent
+}
