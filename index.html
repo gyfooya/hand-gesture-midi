@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Gesture MIDI Controller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        #container {
+            position: relative;
+            max-width: 100%;
+        }
+
+        #videoElement {
+            display: block;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        #canvasElement {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border-radius: 8px;
+        }
+
+        #controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 640px;
+            max-width: 100%;
+        }
+
+        .control-group {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        button:last-child {
+            margin-right: 0;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        #scanMidiBtn {
+            background: #2196F3;
+        }
+
+        #scanMidiBtn:hover {
+            background: #0b7dda;
+        }
+
+        #status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .status-ready {
+            background: #4CAF50;
+        }
+
+        .status-error {
+            background: #f44336;
+        }
+
+        .status-waiting {
+            background: #ff9800;
+        }
+
+        #midiStatus {
+            text-align: center;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+
+        .value-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        select option {
+            background: #1a1a1a;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hand Gesture MIDI Controller</h1>
+
+    <div id="container">
+        <video id="videoElement" width="640" height="480" autoplay></video>
+        <canvas id="canvasElement" width="640" height="480"></canvas>
+    </div>
+
+    <div id="controls">
+        <div id="status" class="status-waiting">Initializing...</div>
+
+        <div class="control-group">
+            <div class="control-row">
+                <label for="midiDeviceSelect">MIDI Output (to DAW):</label>
+            </div>
+            <div class="control-row">
+                <select id="midiDeviceSelect" disabled>
+                    <option value="">Click "Scan MIDI Devices" first</option>
+                </select>
+            </div>
+            <div class="control-row">
+                <button id="scanMidiBtn">Scan MIDI Devices</button>
+                <button id="connectMidiBtn" disabled>Connect MIDI</button>
+            </div>
+            <div class="control-row">
+                <label for="midiChannel">MIDI Channel:</label>
+                <input type="number" id="midiChannel" min="1" max="16" value="1">
+            </div>
+            <div class="control-row">
+                <label for="ccNumber">CC Number:</label>
+                <input type="number" id="ccNumber" min="0" max="127" value="1">
+            </div>
+            <div id="midiStatus">MIDI: Not Connected</div>
+        </div>
+
+        <div class="control-group">
+            <h3>Gesture Control</h3>
+            <div class="control-row">
+                <label>Distance (normalized):</label>
+                <span id="distanceValue" class="value-display">0.00</span>
+            </div>
+            <div class="control-row">
+                <label>MIDI CC Value:</label>
+                <span id="ccValue" class="value-display">0</span>
+            </div>
+            <div class="control-row">
+                <label for="minDistance">Min Distance (close):</label>
+                <input type="number" id="minDistance" min="0" max="0.5" step="0.01" value="0.1">
+            </div>
+            <div class="control-row">
+                <label for="maxDistance">Max Distance (far):</label>
+                <input type="number" id="maxDistance" min="0" max="0.5" step="0.01" value="0.3">
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
